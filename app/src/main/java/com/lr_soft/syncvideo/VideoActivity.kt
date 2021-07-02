@@ -6,20 +6,27 @@ import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
+import android.widget.TextView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
-class VideoActivity : AppCompatActivity() {
+class VideoActivity : AppCompatActivity(), Logger.LogListener {
     private lateinit var videoOverlay: View
     private var animationDuration: Int = 0
+    private lateinit var logTextView: TextView
+    private lateinit var clientServerSelector: ClientServerSelector
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_video)
+        setFullscreen()
+
         videoOverlay = findViewById(R.id.video_overlay)
         animationDuration = resources.getInteger(android.R.integer.config_mediumAnimTime)
-        setFullscreen()
+        logTextView = findViewById(R.id.log_text_view)
+
+        clientServerSelector = ClientServerSelector(this)
     }
 
     fun onSettingsButtonClick(view: View) {
@@ -41,8 +48,7 @@ class VideoActivity : AppCompatActivity() {
                             alpha = 1f
                         }
                     })
-            }
-            else {
+            } else {
                 animate()
                     .alpha(0f)
                     .setDuration(animationDuration.toLong())
@@ -53,6 +59,22 @@ class VideoActivity : AppCompatActivity() {
                     })
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Logger.registerLogListener(this)
+        onNewLogMessage()
+        clientServerSelector.update()
+    }
+
+    override fun onPause() {
+        Logger.unregisterLogListener(this)
+        super.onPause()
+    }
+
+    override fun onNewLogMessage() {
+        runOnUiThread { logTextView.text = Logger.getLogs().joinToString("\n") }
     }
 
     private fun setFullscreen() {

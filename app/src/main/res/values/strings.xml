@@ -3,14 +3,4 @@
     <string name="title_activity_settings">Настройки</string>
     <string name="pref_device_id_key">deviceId</string>
     <string name="pref_device_type_key">deviceType</string>
-
-    <string-array name="device_types">
-        <item>Клиент</item>
-        <item>Сервер</item>
-    </string-array>
-
-    <string-array name="device_types_values">
-        <item>1</item>
-        <item>2</item>
-    </string-array>
 </resources>

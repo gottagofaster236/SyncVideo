@@ -7,7 +7,7 @@
         android:inputType="number" />
 
     <ListPreference
-        android:defaultValue="1"
+        android:defaultValue="client"
         android:title="Тип устройства"
         android:summary="Выберите тип устройства"
         android:key="@string/pref_device_type_key"
