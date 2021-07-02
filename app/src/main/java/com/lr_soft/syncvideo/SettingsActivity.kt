@@ -31,9 +31,15 @@ class SettingsActivity : AppCompatActivity() {
     class SettingsFragment : PreferenceFragmentCompat() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.root_preferences, rootKey)
+
             val preference = findPreference<EditTextPreference>(getString(R.string.pref_device_id_key))
+            // Make the preference accept numeric input only.
             preference?.setOnBindEditTextListener {
                 it.inputType = InputType.TYPE_CLASS_NUMBER
+            }
+            // Checking that the input is not empty
+            preference?.setOnPreferenceChangeListener { pref, newValue ->
+                newValue is String && newValue.isNotEmpty()
             }
         }
     }
