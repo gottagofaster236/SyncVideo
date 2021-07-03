@@ -5,20 +5,17 @@ import androidx.preference.PreferenceManager
 
 class ClientServerSelector(private val context: Context) {
     private val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
-    private var scheduleServer: ScheduleServer? = null
-    private var scheduleClient: Any? = null
+    private var clientOrServer: ClientOrServer? = null
+    private var currentDeviceType: String? = null
 
-    fun update() {
+    fun updateSelection() {
         val newValue = sharedPreferences.getString(context.getString(R.string.pref_device_type_key), "client")
-        if (newValue == "client") {
-            scheduleServer?.stop()
-            scheduleServer = null
-            Logger.log("Client not implemented yet")
-        }
-        else {
-            if (scheduleServer == null) {
-                scheduleServer = ScheduleServer().apply { start() }
-            }
-        }
+        if (currentDeviceType == newValue)
+            return
+        currentDeviceType = newValue
+        clientOrServer?.stop()
+        clientOrServer =
+            if (newValue == "client") ScheduleClient(context) else ScheduleServer(context)
+        clientOrServer?.start()
     }
 }

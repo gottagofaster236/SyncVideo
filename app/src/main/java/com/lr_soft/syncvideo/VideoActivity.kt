@@ -25,7 +25,7 @@ class VideoActivity : AppCompatActivity(), Logger.LogListener {
         animationDuration = resources.getInteger(android.R.integer.config_mediumAnimTime)
         logTextView = findViewById(R.id.log_text_view)
 
-        clientServerSelector = ClientServerSelector(this)
+        clientServerSelector = ClientServerSelector(applicationContext)
     }
 
     fun onSettingsButtonClick(view: View) {
@@ -65,7 +65,7 @@ class VideoActivity : AppCompatActivity(), Logger.LogListener {
         setFullscreen()
         Logger.registerLogListener(this)
         onNewLogMessage()
-        clientServerSelector.update()
+        clientServerSelector.updateSelection()
     }
 
     override fun onPause() {

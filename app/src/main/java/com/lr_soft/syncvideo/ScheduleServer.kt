@@ -1,5 +1,6 @@
 package com.lr_soft.syncvideo
 
+import android.content.Context
 import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.response.*
@@ -8,7 +9,7 @@ import io.ktor.serialization.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 
-class ScheduleServer {
+class ScheduleServer(private val context: Context) : ClientOrServer {
     companion object {
         const val PORT = 23232
         const val ALIVE_RESPONSE = "SyncVideo server"
@@ -39,7 +40,7 @@ class ScheduleServer {
         registerRoutes()
     }
 
-    fun start() {
+    override fun start() {
         if (isRunning)
             return
         Logger.log("Starting the server")
@@ -47,7 +48,7 @@ class ScheduleServer {
         isRunning = true
     }
 
-    fun stop() {
+    override fun stop() {
         Logger.log("Stopping the server!")
         applicationEngine.stop(1000, 1000)
         isRunning = false

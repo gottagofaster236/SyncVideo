@@ -38,7 +38,7 @@ class SettingsActivity : AppCompatActivity() {
                 it.inputType = InputType.TYPE_CLASS_NUMBER
             }
             // Checking that the input is not empty
-            preference?.setOnPreferenceChangeListener { pref, newValue ->
+            preference?.setOnPreferenceChangeListener { _, newValue ->
                 newValue is String && newValue.isNotEmpty()
             }
         }
