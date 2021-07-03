@@ -42,16 +42,14 @@ class ScheduleClient(private val context: Context) : ClientOrServer {
 
         val serverUrls: List<String>
 
-        val millis = measureTimeMillis {
-            runBlocking {
-                val serverCheckDeferred = urlsToCheck.map {
-                    async {
-                        checkUrlForServer(it)
-                    }
-                }
-                val serverCheckResult = serverCheckDeferred.awaitAll()
-                serverUrls = urlsToCheck.filterIndexed { index, _ -> serverCheckResult[index] }
-            }
+        runBlocking {
+		    val serverCheckDeferred = urlsToCheck.map {
+			    async {
+				    checkUrlForServer(it)
+			    }
+		    }
+            val serverCheckResult = serverCheckDeferred.awaitAll()
+            serverUrls = urlsToCheck.filterIndexed { index, _ -> serverCheckResult[index] }
         }
 
         when (serverUrls.size) {
