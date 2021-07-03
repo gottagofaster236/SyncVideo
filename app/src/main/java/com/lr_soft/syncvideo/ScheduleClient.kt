@@ -2,36 +2,30 @@ package com.lr_soft.syncvideo
 
 import android.content.Context
 import io.ktor.client.*
+import io.ktor.client.engine.cio.*
 import io.ktor.client.features.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.NetworkInterface
 import java.net.SocketException
-import java.util.concurrent.Callable
-import java.util.concurrent.Executors
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 import kotlin.system.measureTimeMillis
 
 
 class ScheduleClient(private val context: Context) : ClientOrServer {
-    private val client = HttpClient {
-        install(HttpTimeout) {
-            requestTimeoutMillis = 1000
-            connectTimeoutMillis = 1000
-        }
+    private val client = HttpClient(CIO) {
+        install(HttpTimeout)
     }
     private var serverUrl: String? = null
     private var clientThread: Thread? = null
 
     private fun searchForServer(): String? {
+        Logger.log("Searching for the server")
         val lanIpAddress = getLanIpAddress()
         if (lanIpAddress == null) {
             Logger.log("Could not get LAN IP address")
@@ -48,16 +42,17 @@ class ScheduleClient(private val context: Context) : ClientOrServer {
 
         val serverUrls: List<String>
 
-        Logger.log("Searching for the server")
         val millis = measureTimeMillis {
-            val executor = Executors.newCachedThreadPool()
-            val futures = urlsToCheck.map {
-                executor.submit(Callable { checkUrlForServer(it) })
+            runBlocking {
+                val serverCheckDeferred = urlsToCheck.map {
+                    async {
+                        checkUrlForServer(it)
+                    }
+                }
+                val serverCheckResult = serverCheckDeferred.awaitAll()
+                serverUrls = urlsToCheck.filterIndexed { index, _ -> serverCheckResult[index] }
             }
-            executor.awaitTermination(1000, TimeUnit.SECONDS)
-            serverUrls = urlsToCheck.filterIndexed { index, _ -> futures[index].get() }
         }
-        Logger.log("Finished in $millis millis")
 
         when (serverUrls.size) {
             0 -> Logger.log("Server not found.")
@@ -67,20 +62,20 @@ class ScheduleClient(private val context: Context) : ClientOrServer {
         return null
     }
 
-    private fun checkUrlForServer(url: String): Boolean {
+    private suspend fun checkUrlForServer(url: String): Boolean {
         return try {
-            Logger.log("Checking $url")
-            val responseText: String
-            runBlocking {
-                responseText = client.get("$url/alive")
+            val response: String = client.get("$url/alive") {
+                timeout {
+                    requestTimeoutMillis = 10000
+                }
             }
-            Logger.log("Response text: $url")
-            responseText == ScheduleServer.ALIVE_RESPONSE
-        } catch (e: IOException) {
-            false
-        } catch (e: HttpRequestTimeoutException) {
-            Logger.log("Timeout exception")
-            false
+            response == ScheduleServer.ALIVE_RESPONSE
+        } catch (e: Exception) {
+            when (e) {
+                is IOException -> false
+                is HttpRequestTimeoutException -> false
+                else -> throw e
+            }
         }
     }
 
