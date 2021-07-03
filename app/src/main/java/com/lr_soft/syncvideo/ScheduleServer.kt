@@ -8,32 +8,47 @@ import io.ktor.serialization.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 
-class ScheduleServer(port: Int = 1234) {
+class ScheduleServer {
+    companion object {
+        const val PORT = 23232
+        const val ALIVE_RESPONSE = "SyncVideo server"
+    }
     private val applicationEngine: ApplicationEngine
     private var isRunning = false
 
-    init {
-        applicationEngine = embeddedServer(Netty, port) {
-            install(ContentNegotiation) {
-                json()
-            }
-            routing {
-                get("/") {
-                    call.respond(mapOf("message" to "hello world"))
-                }
-            }
+    private fun Application.registerRoutes() {
+        routing {
+            aliveCheckRouting()
         }
+    }
+
+    private fun Route.aliveCheckRouting() {
+        get("/alive") {
+            call.respond(ALIVE_RESPONSE)
+        }
+    }
+
+    init {
+        applicationEngine = embeddedServer(Netty, PORT) { module() }
+    }
+
+    private fun Application.module() {
+        install(ContentNegotiation) {
+            json()
+        }
+        registerRoutes()
     }
 
     fun start() {
         if (isRunning)
             return
-        Logger.log("Starting server!")
+        Logger.log("Starting the server")
         applicationEngine.start(wait = false)
         isRunning = true
     }
 
     fun stop() {
+        Logger.log("Stopping the server!")
         applicationEngine.stop(1000, 1000)
         isRunning = false
     }

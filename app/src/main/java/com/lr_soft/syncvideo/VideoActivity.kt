@@ -20,7 +20,6 @@ class VideoActivity : AppCompatActivity(), Logger.LogListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_video)
-        setFullscreen()
 
         videoOverlay = findViewById(R.id.video_overlay)
         animationDuration = resources.getInteger(android.R.integer.config_mediumAnimTime)
@@ -63,6 +62,7 @@ class VideoActivity : AppCompatActivity(), Logger.LogListener {
 
     override fun onResume() {
         super.onResume()
+        setFullscreen()
         Logger.registerLogListener(this)
         onNewLogMessage()
         clientServerSelector.update()

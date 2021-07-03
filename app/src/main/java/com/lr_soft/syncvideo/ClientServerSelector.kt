@@ -1,7 +1,6 @@
 package com.lr_soft.syncvideo
 
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.preference.PreferenceManager
 
 class ClientServerSelector(private val context: Context) {
@@ -12,6 +11,8 @@ class ClientServerSelector(private val context: Context) {
     fun update() {
         val newValue = sharedPreferences.getString(context.getString(R.string.pref_device_type_key), "client")
         if (newValue == "client") {
+            scheduleServer?.stop()
+            scheduleServer = null
             Logger.log("Client not implemented yet")
         }
         else {
