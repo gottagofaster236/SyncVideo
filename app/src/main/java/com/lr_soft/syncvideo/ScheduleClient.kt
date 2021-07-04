@@ -44,9 +44,7 @@ class ScheduleClient(private val context: Context) : ClientOrServer {
 
         runBlocking {
 		    val serverCheckDeferred = urlsToCheck.map {
-			    async {
-				    checkUrlForServer(it)
-			    }
+			    async { checkUrlForServer(it) }
 		    }
             val serverCheckResult = serverCheckDeferred.awaitAll()
             serverUrls = urlsToCheck.filterIndexed { index, _ -> serverCheckResult[index] }
