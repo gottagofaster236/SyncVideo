@@ -28,6 +28,24 @@ class VideoActivity : AppCompatActivity(), Logger.LogListener {
         clientServerSelector = ClientServerSelector(applicationContext)
     }
 
+    override fun onResume() {
+        super.onResume()
+        setFullscreen()
+        Logger.registerLogListener(this)
+        onNewLogMessage()
+        clientServerSelector.updateSelection()
+    }
+
+    override fun onPause() {
+        Logger.unregisterLogListener(this)
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        clientServerSelector.stop()
+        super.onDestroy()
+    }
+
     fun onSettingsButtonClick(view: View) {
         toggleVideoOverlayVisibility()
         val intent = Intent(this, SettingsActivity::class.java)
@@ -60,18 +78,7 @@ class VideoActivity : AppCompatActivity(), Logger.LogListener {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        setFullscreen()
-        Logger.registerLogListener(this)
-        onNewLogMessage()
-        clientServerSelector.updateSelection()
-    }
 
-    override fun onPause() {
-        Logger.unregisterLogListener(this)
-        super.onPause()
-    }
 
     override fun onNewLogMessage() {
         runOnUiThread { logTextView.text = Logger.getLogs().joinToString("\n") }

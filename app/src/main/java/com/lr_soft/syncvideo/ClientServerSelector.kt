@@ -18,4 +18,8 @@ class ClientServerSelector(private val context: Context) {
             if (newValue == "client") ScheduleClient(context) else ScheduleServer(context)
         clientOrServer?.start()
     }
+
+    fun stop() {
+        clientOrServer?.stop()
+    }
 }
