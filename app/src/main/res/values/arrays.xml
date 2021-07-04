@@ -1,7 +1,7 @@
 <resources>
     <string-array name="device_types">
-        <item>Клиент</item>
-        <item>Сервер</item>
+        <item>@string/client</item>
+        <item>@string/server</item>
     </string-array>
 
     <string-array name="device_types_values">

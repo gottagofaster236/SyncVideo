@@ -2,14 +2,14 @@
 
     <EditTextPreference
         android:key="@string/pref_device_id_key"
-        android:title="Номер устройства"
-        android:summary="Выбирите номер устройства"
+        android:title="@string/device_number"
+        android:summary="@string/select_device_number"
         android:inputType="number" />
 
     <ListPreference
         android:defaultValue="client"
-        android:title="Тип устройства"
-        android:summary="Выберите тип устройства"
+        android:title="@string/device_type"
+        android:summary="@string/select_device_type"
         android:key="@string/pref_device_type_key"
         android:entries="@array/device_types"
         android:entryValues="@array/device_types_values" />

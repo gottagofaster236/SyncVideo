@@ -3,4 +3,11 @@
     <string name="title_activity_settings">Настройки</string>
     <string name="pref_device_id_key">deviceId</string>
     <string name="pref_device_type_key">deviceType</string>
+    <string name="pref_has_finished_setup_key">has_finished_setup</string>
+    <string name="device_number">Номер устройства</string>
+    <string name="select_device_number">Выбирите номер устройства</string>
+    <string name="device_type">Тип устройства</string>
+    <string name="select_device_type">Выберите тип устройства</string>
+    <string name="client">Клиент</string>
+    <string name="server">Сервер</string>
 </resources>
