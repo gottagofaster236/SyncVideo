@@ -52,7 +52,7 @@ class ScheduleClient(private val context: Context) : ClientOrServer {
 
         when (serverUrls.size) {
             0 -> Logger.log("Server not found.")
-            1 -> return serverUrls[0]
+            1 -> return serverUrls[0].apply { Logger.log("Server IP: $this") }
             else -> Logger.log("More than one server found! Cannot continue.")
         }
         return null
@@ -90,7 +90,6 @@ class ScheduleClient(private val context: Context) : ClientOrServer {
     private fun clientMain() {
         Logger.log("Starting the client")
         serverUrl = searchForServer()
-        Logger.log("Server: $serverUrl")
     }
 
     override fun start() {
