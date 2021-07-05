@@ -55,7 +55,8 @@ class FileManager(private val context: Context) {
     }
 
     fun getFile(filename: String): DocumentFile? {
-        return folder.findFile(filename)
+        val file = folder.findFile(filename) ?: return null
+        return if (file.exists()) file else null
     }
 
     private companion object {

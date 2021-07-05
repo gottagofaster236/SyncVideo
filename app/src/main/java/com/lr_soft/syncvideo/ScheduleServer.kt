@@ -9,6 +9,8 @@ import io.ktor.routing.*
 import io.ktor.serialization.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -29,6 +31,7 @@ class ScheduleServer(context: Context) : ClientOrServer(context) {
         routing {
             aliveCheckRouting()
             scheduleRouting()
+            getFileRouting()
         }
     }
 
@@ -42,13 +45,43 @@ class ScheduleServer(context: Context) : ClientOrServer(context) {
         get("/schedule") {
             schedule.let {
                 if (it != null) {
-                    call.respond(HttpStatusCode.OK, it)
+                    call.respond(it)
                 }
                 else {
-                    call.respond(HttpStatusCode.NotFound, "Schedule not found on disk.")
+                    call.respondFileNotFound()
                 }
             }
         }
+    }
+
+    private fun Route.getFileRouting() {
+        get("/file/{filename}") {
+            val filename = call.parameters["filename"] ?: return@get call.respondText(
+                "Missing filename",
+                status = HttpStatusCode.BadRequest
+            )
+            val file = fileManager.getFile(filename) ?: return@get call.respondFileNotFound()
+            val inputStream = withContext(Dispatchers.IO) {
+                this@ScheduleServer.context.contentResolver.openInputStream(file.uri)
+            } ?: return@get call.respondFileNotFound()
+
+            val bytes: ByteArray
+            try {
+                inputStream.use { bytes = it.readBytes() }
+            }
+            catch (e: IOException) {
+                return@get call.respondFileNotFound()
+            }
+
+            call.respondBytes(bytes)
+        }
+    }
+
+    private suspend fun ApplicationCall.respondFileNotFound() {
+        respondText(
+            "File not found",
+            status = HttpStatusCode.NotFound
+        )
     }
 
     init {
