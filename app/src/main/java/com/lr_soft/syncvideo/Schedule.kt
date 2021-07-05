@@ -1,14 +1,12 @@
 package com.lr_soft.syncvideo
 
-import java.time.LocalTime
-import kotlinx.serialization.*
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
-import java.time.format.DateTimeFormatter
+import java.time.LocalTime
 
 @Serializable
 data class Schedule(val scheduledVideos: List<ScheduledVideo>)

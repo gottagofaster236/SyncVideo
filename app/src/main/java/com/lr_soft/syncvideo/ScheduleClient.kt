@@ -5,7 +5,6 @@ import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.features.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
@@ -14,10 +13,9 @@ import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.NetworkInterface
 import java.net.SocketException
-import kotlin.system.measureTimeMillis
 
 
-class ScheduleClient(private val context: Context) : ClientOrServer {
+class ScheduleClient(context: Context) : ClientOrServer(context) {
     private val client = HttpClient(CIO) {
         install(HttpTimeout)
     }
@@ -98,5 +96,13 @@ class ScheduleClient(private val context: Context) : ClientOrServer {
 
     override fun stop() {
         Logger.log("Stopping the client")
+    }
+
+    override fun fetchSchedule(): Schedule? {
+        return null
+    }
+
+    override fun handleMissingFile() {
+        TODO("Not yet implemented")
     }
 }

@@ -1,0 +1,4 @@
+{"scheduledVideos": [
+	{"deviceId": "1", "filename": "example file.mp4", "startTime": "04:20", "loop": true},
+	{"deviceId": "2", "filename": "some other file.mp4", "startTime": "16:20", "loop": true}
+]}

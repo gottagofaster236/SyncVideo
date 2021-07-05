@@ -54,6 +54,10 @@ class FileManager(private val context: Context) {
         }
     }
 
+    fun getFile(filename: String): DocumentFile? {
+        return folder.findFile(filename)
+    }
+
     private companion object {
         const val HAS_SELECTED_FOLDER_KEY = "hasSelectedFolder"
         const val FOLDER_URI_KEY = "folderUri"
