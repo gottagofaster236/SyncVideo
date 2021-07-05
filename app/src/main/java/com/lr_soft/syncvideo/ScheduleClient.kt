@@ -5,9 +5,13 @@ import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.features.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import java.io.IOException
 import java.net.Inet4Address
 import java.net.InetAddress
@@ -17,10 +21,49 @@ import java.net.SocketException
 
 class ScheduleClient(context: Context) : ClientOrServer(context) {
     private val client = HttpClient(CIO) {
-        install(HttpTimeout)
+        install(HttpTimeout) {
+            requestTimeoutMillis = 10000
+        }
     }
+
     private var serverUrl: String? = null
-    private var clientThread: Thread? = null
+        get() {
+            if (field == null)
+                field = searchForServer()
+            return field
+        }
+
+    override fun fetchSchedule(): Schedule? {
+        var schedule: Schedule? = null
+
+        runBlocking {
+            val serverUrl = serverUrl ?: return@runBlocking
+
+            val response: HttpResponse
+            val responseText: String
+            try {
+                response = client.get("$serverUrl/schedule")
+                responseText = response.readText()
+            } catch (e: Exception) {
+                handleRequestException(e)
+                return@runBlocking
+            }
+
+            if (response.status != HttpStatusCode.OK) {
+                return@runBlocking
+            }
+            schedule = Json.decodeFromString(responseText)
+        }
+        return schedule
+    }
+
+    override fun handleMissingFile() {
+
+    }
+
+    override fun start() {}
+
+    override fun stop() {}
 
     private fun searchForServer(): String? {
         Logger.log("Searching for the server")
@@ -50,7 +93,7 @@ class ScheduleClient(context: Context) : ClientOrServer(context) {
 
         when (serverUrls.size) {
             0 -> Logger.log("Server not found.")
-            1 -> return serverUrls[0].apply { Logger.log("Server IP: $this") }
+            1 -> return serverUrls[0].also { Logger.log("Server IP: $it") }
             else -> Logger.log("More than one server found! Cannot continue.")
         }
         return null
@@ -58,18 +101,19 @@ class ScheduleClient(context: Context) : ClientOrServer(context) {
 
     private suspend fun checkUrlForServer(url: String): Boolean {
         return try {
-            val response: String = client.get("$url/alive") {
-                timeout {
-                    requestTimeoutMillis = 10000
-                }
-            }
+            val response: String = client.get("$url/alive")
             response == ScheduleServer.ALIVE_RESPONSE
         } catch (e: Exception) {
-            when (e) {
-                is IOException -> false
-                is HttpRequestTimeoutException -> false
-                else -> throw e
-            }
+            handleRequestException(e)
+            return false
+        }
+    }
+
+    private fun handleRequestException(e: Exception) {
+        when (e) {
+            is IOException -> return
+            is HttpRequestTimeoutException -> return
+            else -> throw e
         }
     }
 
@@ -83,26 +127,5 @@ class ScheduleClient(context: Context) : ClientOrServer(context) {
             }
         } catch (e: SocketException) {}
         return null
-    }
-
-    private fun clientMain() {
-        Logger.log("Starting the client")
-        serverUrl = searchForServer()
-    }
-
-    override fun start() {
-        clientThread = Thread(::clientMain).apply { start() }
-    }
-
-    override fun stop() {
-        Logger.log("Stopping the client")
-    }
-
-    override fun fetchSchedule(): Schedule? {
-        return null
-    }
-
-    override fun handleMissingFile() {
-        TODO("Not yet implemented")
     }
 }

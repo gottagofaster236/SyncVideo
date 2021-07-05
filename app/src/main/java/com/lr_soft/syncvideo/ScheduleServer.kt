@@ -24,7 +24,6 @@ class ScheduleServer(context: Context) : ClientOrServer(context) {
         private const val SCHEDULE_FILENAME = "schedule.txt"
     }
     private val applicationEngine: ApplicationEngine
-    private var isRunning = false
 
     private fun Application.registerRoutes() {
         routing {
@@ -64,19 +63,13 @@ class ScheduleServer(context: Context) : ClientOrServer(context) {
     }
 
     override fun start() {
-        if (isRunning)
-            return
         Logger.log("Starting the server")
         applicationEngine.start(wait = false)
-        isRunning = true
-
-        Logger.log("Schedule: $schedule")
     }
 
     override fun stop() {
         Logger.log("Stopping the server!")
         applicationEngine.stop(1000, 1000)
-        isRunning = false
     }
 
     override fun fetchSchedule(): Schedule? {
