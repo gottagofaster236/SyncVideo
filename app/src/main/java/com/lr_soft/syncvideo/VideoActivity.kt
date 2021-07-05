@@ -10,22 +10,36 @@ import android.widget.TextView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.lr_soft.syncvideo.SettingsActivity.Companion.needSetup
 
 class VideoActivity : AppCompatActivity(), Logger.LogListener {
+    private lateinit var clientServerSelector: ClientServerSelector
     private lateinit var videoOverlay: View
     private var animationDuration: Int = 0
     private lateinit var logTextView: TextView
-    private lateinit var clientServerSelector: ClientServerSelector
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_video)
+        clientServerSelector = ClientServerSelector(applicationContext)
 
+        if (needSetup()) {
+            goToSettings()
+            return
+        }
+
+        setContentView(R.layout.activity_video)
         videoOverlay = findViewById(R.id.video_overlay)
         animationDuration = resources.getInteger(android.R.integer.config_mediumAnimTime)
         logTextView = findViewById(R.id.log_text_view)
+    }
 
-        clientServerSelector = ClientServerSelector(applicationContext)
+    private fun goToSettings() {
+        val intent = Intent(this, SettingsActivity::class.java)
+        startActivity(intent)
+        if (needSetup()) {
+            // Make sure the user cannot return to this activity before filling in the settings.
+            finish()
+        }
     }
 
     override fun onResume() {
@@ -48,8 +62,7 @@ class VideoActivity : AppCompatActivity(), Logger.LogListener {
 
     fun onSettingsButtonClick(view: View) {
         toggleVideoOverlayVisibility()
-        val intent = Intent(this, SettingsActivity::class.java)
-        startActivity(intent)
+        goToSettings()
     }
 
     fun toggleVideoOverlayVisibility(view: View? = null) {
@@ -77,8 +90,6 @@ class VideoActivity : AppCompatActivity(), Logger.LogListener {
             }
         }
     }
-
-
 
     override fun onNewLogMessage() {
         runOnUiThread { logTextView.text = Logger.getLogs().joinToString("\n") }

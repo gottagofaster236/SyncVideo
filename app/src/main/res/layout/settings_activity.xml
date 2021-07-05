@@ -1,12 +1,29 @@
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
     <FrameLayout
         android:id="@+id/settings"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="wrap_content"/>
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/select_application_folder"
+        android:layout_margin="10dp"
+        android:layout_gravity="center_horizontal"
+        android:onClick="onSelectAppFolderClicked" />
+
+    <Button
+        android:id="@+id/continueButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/continue_text"
+        android:layout_margin="10dp"
+        android:layout_gravity="center_horizontal"
+        android:onClick="onContinueButtonClick" />
 
 </LinearLayout>

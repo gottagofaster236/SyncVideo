@@ -19,6 +19,7 @@
         android:background="#66000000"
         android:visibility="gone"
         android:id="@+id/video_overlay">
+
         <ImageButton
             android:onClick="onSettingsButtonClick"
             android:layout_width="80dp"
@@ -26,8 +27,7 @@
             android:layout_margin="20dp"
             android:layout_alignParentTop="true"
             android:layout_alignParentEnd="true"
-            android:background="@drawable/settings_icon"
-            />
+            android:background="@drawable/settings_icon" />
 
         <TextView
             android:layout_width="match_parent"

@@ -3,11 +3,13 @@
     <string name="title_activity_settings">Настройки</string>
     <string name="pref_device_id_key">deviceId</string>
     <string name="pref_device_type_key">deviceType</string>
-    <string name="pref_has_finished_setup_key">has_finished_setup</string>
     <string name="device_number">Номер устройства</string>
     <string name="select_device_number">Выбирите номер устройства</string>
     <string name="device_type">Тип устройства</string>
     <string name="select_device_type">Выберите тип устройства</string>
     <string name="client">Клиент</string>
     <string name="server">Сервер</string>
+    <string name="continue_text">Продолжить</string>
+    <string name="device_id_should_not_be_empty">Номер устройства не должен быть пустым!</string>
+    <string name="select_application_folder">Выбрать папку с файлами\n(нужно для сервера)</string>
 </resources>
