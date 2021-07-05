@@ -11,5 +11,5 @@
     <string name="server">Сервер</string>
     <string name="continue_text">Продолжить</string>
     <string name="device_id_should_not_be_empty">Номер устройства не должен быть пустым!</string>
-    <string name="select_application_folder">Выбрать папку с файлами\n(нужно для сервера)</string>
+    <string name="select_application_folder">Выбрать папку для файлов\n(обязательно для сервера)</string>
 </resources>
