@@ -21,7 +21,7 @@ class FileManager(private val context: Context) {
             val uri = if (uriString != null) {
                 Uri.parse(uriString)
             } else {
-                val filesDir = context.filesDir
+                val filesDir = context.getExternalFilesDir(null) ?: context.filesDir
                 Uri.fromFile(filesDir)
             }
 
