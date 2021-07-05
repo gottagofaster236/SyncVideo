@@ -3,6 +3,7 @@ package com.lr_soft.syncvideo
 import android.content.Context
 import io.ktor.application.*
 import io.ktor.features.*
+import io.ktor.http.*
 import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.serialization.*
@@ -28,12 +29,26 @@ class ScheduleServer(context: Context) : ClientOrServer(context) {
     private fun Application.registerRoutes() {
         routing {
             aliveCheckRouting()
+            scheduleRouting()
         }
     }
 
     private fun Route.aliveCheckRouting() {
         get("/alive") {
             call.respond(ALIVE_RESPONSE)
+        }
+    }
+
+    private fun Route.scheduleRouting() {
+        get("/schedule") {
+            schedule.let {
+                if (it != null) {
+                    call.respond(HttpStatusCode.OK, it)
+                }
+                else {
+                    call.respond(HttpStatusCode.NotFound, "Schedule not found on disk.")
+                }
+            }
         }
     }
 
