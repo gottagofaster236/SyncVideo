@@ -4,19 +4,20 @@ import android.content.Context
 import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.serialization.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.utils.io.*
+import io.ktor.utils.io.jvm.javaio.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import java.io.BufferedReader
-import java.io.IOException
-import java.io.InputStreamReader
+import java.io.*
 import java.nio.charset.StandardCharsets
 
 class ScheduleServer(context: Context) : ClientOrServer(context) {
@@ -61,19 +62,11 @@ class ScheduleServer(context: Context) : ClientOrServer(context) {
                 status = HttpStatusCode.BadRequest
             )
             val file = fileManager.getFile(filename) ?: return@get call.respondFileNotFound()
-            val inputStream = withContext(Dispatchers.IO) {
+            val inputStream = withContext(Dispatchers.Default) {
                 this@ScheduleServer.context.contentResolver.openInputStream(file.uri)
             } ?: return@get call.respondFileNotFound()
 
-            val bytes: ByteArray
-            try {
-                inputStream.use { bytes = it.readBytes() }
-            }
-            catch (e: IOException) {
-                return@get call.respondFileNotFound()
-            }
-
-            call.respondBytes(bytes)
+            call.respond(InputStreamContent(inputStream))
         }
     }
 
@@ -82,6 +75,12 @@ class ScheduleServer(context: Context) : ClientOrServer(context) {
             "File not found",
             status = HttpStatusCode.NotFound
         )
+    }
+
+    private class InputStreamContent(private val inputStream: InputStream) : OutgoingContent.ReadChannelContent() {
+        override fun readFrom(): ByteReadChannel {
+            return inputStream.toByteReadChannel()
+        }
     }
 
     init {
@@ -123,7 +122,7 @@ class ScheduleServer(context: Context) : ClientOrServer(context) {
         }
     }
 
-    override fun handleMissingFile() {
+    override fun handleMissingFile(filename: String) {
         // We can't do anything if a file is missing on the server side.
     }
 }

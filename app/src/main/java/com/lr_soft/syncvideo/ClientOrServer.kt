@@ -10,7 +10,7 @@ abstract class ClientOrServer(val context: Context) {
 
     abstract fun fetchSchedule(): Schedule?
 
-    abstract fun handleMissingFile()
+    abstract fun handleMissingFile(filename: String)
 
     protected var fileManager = FileManager(context)
 

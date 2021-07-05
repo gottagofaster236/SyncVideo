@@ -18,14 +18,13 @@ class FileManager(private val context: Context) {
     val folder: DocumentFile
         get() {
             val uriString = preferences.getString(FOLDER_URI_KEY, null)
-            val uri = if (uriString != null) {
-                Uri.parse(uriString)
+            if (uriString != null) {
+                val uri = Uri.parse(uriString)
+                return DocumentFile.fromTreeUri(context, uri)!!
             } else {
                 val filesDir = context.getExternalFilesDir(null) ?: context.filesDir
-                Uri.fromFile(filesDir)
+                return DocumentFile.fromFile(filesDir)
             }
-
-            return DocumentFile.fromTreeUri(context, uri)!!
         }
 
     fun registerAppFolderActivityResult(activity: AppCompatActivity) {
