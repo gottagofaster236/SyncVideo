@@ -59,10 +59,15 @@ class ScheduleClient(context: Context) : ClientOrServer(context) {
     }
 
     override fun handleMissingFile(filename: String) {
+        // Checking before launching a thread to save on resources.
+        if (alreadyDownloading(filename)) {
+            return
+        }
+
         thread {
             runBlocking {
                 synchronized(currentlyDownloading) {
-                    if (currentlyDownloading.contains(filename)) {
+                    if (alreadyDownloading(filename)) {
                         return@runBlocking
                     }
                     currentlyDownloading.add(filename)
@@ -73,7 +78,14 @@ class ScheduleClient(context: Context) : ClientOrServer(context) {
         }
     }
 
+    private fun alreadyDownloading(filename: String): Boolean {
+        synchronized(currentlyDownloading) {
+            return currentlyDownloading.contains(filename)
+        }
+    }
+
     private suspend fun downloadFile(filename: String) {
+        Logger.log("Starting downloading $filename")
         val folder = fileManager.folder
         val tmpFile = folder.createFile("text/plain", "$filename.tmp") ?: return
         var success = false
@@ -105,9 +117,11 @@ class ScheduleClient(context: Context) : ClientOrServer(context) {
         } finally {
             if (success) {
                 tmpFile.renameTo(filename)
+                Logger.log("Finished downloading $filename")
             }
             else {
                 tmpFile.delete()
+                Logger.log("Failed downloading $filename")
             }
         }
     }
