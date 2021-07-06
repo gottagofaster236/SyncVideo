@@ -4,8 +4,9 @@ import android.content.Context
 import androidx.preference.PreferenceManager
 
 class ClientServerSelector(private val context: Context) {
+    var clientOrServer: ClientOrServer? = null
+        private set
     private val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
-    private var clientOrServer: ClientOrServer? = null
     private var currentDeviceType: String? = null
 
     fun updateSelection() {

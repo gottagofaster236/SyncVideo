@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
+import android.widget.VideoView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -14,12 +15,15 @@ import com.lr_soft.syncvideo.SettingsActivity.Companion.needSetup
 
 class VideoActivity : AppCompatActivity(), Logger.LogListener {
     private lateinit var clientServerSelector: ClientServerSelector
+    private lateinit var videoSynchronizer: VideoSynchronizer
+    private lateinit var videoView: VideoView
     private lateinit var videoOverlay: View
     private var animationDuration: Int = 0
     private lateinit var logTextView: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Gotta to initialize clientServerSelector before the next if
         clientServerSelector = ClientServerSelector(applicationContext)
 
         if (needSetup()) {
@@ -28,9 +32,12 @@ class VideoActivity : AppCompatActivity(), Logger.LogListener {
         }
 
         setContentView(R.layout.activity_video)
+        videoView = findViewById(R.id.video_view)
         videoOverlay = findViewById(R.id.video_overlay)
         animationDuration = resources.getInteger(android.R.integer.config_mediumAnimTime)
         logTextView = findViewById(R.id.log_text_view)
+
+        videoSynchronizer = VideoSynchronizer(this, videoView, clientServerSelector)
     }
 
     private fun goToSettings() {
@@ -48,6 +55,7 @@ class VideoActivity : AppCompatActivity(), Logger.LogListener {
         Logger.registerLogListener(this)
         onNewLogMessage()
         clientServerSelector.updateSelection()
+        videoSynchronizer.start()
     }
 
     override fun onPause() {
@@ -56,6 +64,7 @@ class VideoActivity : AppCompatActivity(), Logger.LogListener {
     }
 
     override fun onDestroy() {
+        videoSynchronizer.stop()
         clientServerSelector.stop()
         super.onDestroy()
     }

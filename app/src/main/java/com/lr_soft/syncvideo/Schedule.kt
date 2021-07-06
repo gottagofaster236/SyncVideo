@@ -9,7 +9,10 @@ import kotlinx.serialization.encoding.Encoder
 import java.time.LocalTime
 
 @Serializable
-data class Schedule(val scheduledVideos: List<ScheduledVideo>)
+data class Schedule(val timezoneOffset: Int, val scheduledVideos: List<ScheduledVideo>) {
+    fun filterByDeviceId(deviceId: String) =
+        Schedule(timezoneOffset, scheduledVideos.filter { it.deviceId == deviceId })
+}
 
 @Serializable
 data class ScheduledVideo(val deviceId: String,
@@ -28,5 +31,4 @@ private object LocalTimeSerializer : KSerializer<LocalTime> {
     override fun deserialize(decoder: Decoder): LocalTime {
         return LocalTime.parse(decoder.decodeString())
     }
-
 }

@@ -3,7 +3,7 @@ package com.lr_soft.syncvideo
 import android.content.Context
 import android.os.SystemClock
 
-abstract class ClientOrServer(val context: Context) {
+abstract class ClientOrServer(protected val context: Context) {
     abstract fun start()
 
     abstract fun stop()
