@@ -5,9 +5,9 @@ import android.animation.AnimatorListenerAdapter
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.view.TextureView
 import android.view.View
 import android.widget.TextView
-import android.widget.VideoView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -16,7 +16,6 @@ import com.lr_soft.syncvideo.SettingsActivity.Companion.needSetup
 class VideoActivity : AppCompatActivity(), Logger.LogListener {
     private lateinit var clientServerSelector: ClientServerSelector
     private lateinit var videoSynchronizer: VideoSynchronizer
-    private lateinit var videoView: VideoView
     private lateinit var videoOverlay: View
     private var animationDuration: Int = 0
     private lateinit var logTextView: TextView
@@ -32,12 +31,18 @@ class VideoActivity : AppCompatActivity(), Logger.LogListener {
         }
 
         setContentView(R.layout.activity_video)
-        videoView = findViewById(R.id.video_view)
         videoOverlay = findViewById(R.id.video_overlay)
         animationDuration = resources.getInteger(android.R.integer.config_mediumAnimTime)
         logTextView = findViewById(R.id.log_text_view)
+        val foregroundVideoView = findViewById<TextureView>(R.id.foreground_video_view)
+        val backgroundVideoView = findViewById<TextureView>(R.id.background_video_view)
 
-        videoSynchronizer = VideoSynchronizer(this, videoView, clientServerSelector)
+        videoSynchronizer = VideoSynchronizer(
+            activity = this,
+            clientServerSelector,
+            foregroundVideoView,
+            backgroundVideoView
+        )
     }
 
     private fun goToSettings() {
