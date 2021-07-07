@@ -20,4 +20,4 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
--keep public class io.netty.buffer.AbstractByteBufAllocator
+-keep public class io.netty.buffer.** { *; }
