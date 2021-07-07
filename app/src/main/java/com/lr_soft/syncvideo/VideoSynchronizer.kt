@@ -3,9 +3,11 @@ package com.lr_soft.syncvideo
 import android.app.Activity
 import android.graphics.SurfaceTexture
 import android.media.MediaPlayer
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.DisplayMetrics
 import android.view.Surface
 import android.view.TextureView
 import androidx.preference.PreferenceManager
@@ -13,36 +15,44 @@ import com.lyft.kronos.AndroidClockFactory
 import com.lyft.kronos.KronosClock
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.math.absoluteValue
+
 
 class VideoSynchronizer(
     private val activity: Activity,
     private val clientOrServerSelector: ClientServerSelector,
-    foregroundVideoView: TextureView,
-    backgroundVideoView: TextureView
+    foregroundTextureView: TextureView,
+    backgroundTextureView: TextureView
 ) {
-    private val syncVideoPlayer = SyncVideoPlayer(foregroundVideoView, backgroundVideoView)
+    private val syncVideoPlayer = SyncVideoPlayer(foregroundTextureView, backgroundTextureView)
     private lateinit var kronosClock: KronosClock
     private val fileManager = FileManager(activity.applicationContext)
     private val preferences = PreferenceManager.getDefaultSharedPreferences(activity)
-    private val timer = Timer()
+    private lateinit var timer: Timer
     private var isRunning = false
+    // Statistics for better synchronization.
+    // The amount of milliseconds that seekTo is offset by.
+    private val seekBiasMs = AverageInt(initialValue = 0, oldCoefficient = 0.7)
+    private val averageLagMs = AverageInt(initialValue = 0)
+    private var synchronizedLastTime = false
 
     fun start() {
         isRunning = true
         kronosClock = AndroidClockFactory.createKronosClock(activity.applicationContext)
         kronosClock.syncInBackground()
+        timer = Timer()
         timer.scheduleAtFixedRate(object : TimerTask() {
             override fun run() {
                 synchronizeVideo()
             }
-        }, 0, 1000)
+        }, 0, 500)
     }
 
     fun stop() {
         isRunning = false
         kronosClock.shutdown()
         timer.cancel()
-        syncVideoPlayer.preparedVideo = null
+        syncVideoPlayer.stop()
     }
 
     private fun synchronizeVideo() {
@@ -69,6 +79,11 @@ class VideoSynchronizer(
         if (!isRunning) {
             return
         }
+        if (schedule.scheduledVideos.isEmpty()) {
+            syncVideoPlayer.stop()
+            return
+        }
+
         val currentTimeMs = kronosClock.getCurrentTimeMs()
         val localTimeMs = currentTimeMs + TimeUnit.HOURS.toMillis(schedule.timezoneOffset.toLong())
         val millisSinceDayStart = localTimeMs % TimeUnit.DAYS.toMillis(1)
@@ -76,11 +91,11 @@ class VideoSynchronizer(
         val videos = schedule.scheduledVideos.toMutableList()
         videos.sortBy { it.startTime }
         val currentVideo =
-            videos.firstOrNull { it.startTime.toNanoOfDay() <= millisSinceDayStart * 1000 }
+            videos.lastOrNull { it.startTime.toNanoOfDay() <= millisSinceDayStart * 1_000_000 }
                 ?: videos.last()
 
         var millisSinceVideoStart =
-            millisSinceDayStart - currentVideo.startTime.toNanoOfDay() / 1000
+            millisSinceDayStart - currentVideo.startTime.toNanoOfDay() / 1_000_000
         if (millisSinceVideoStart < 0)
             millisSinceVideoStart += TimeUnit.DAYS.toMillis(1)
         synchronizeVideo(currentVideo, millisSinceVideoStart.toInt())
@@ -96,20 +111,48 @@ class VideoSynchronizer(
             return
         }
 
-        val delay = (syncVideoPlayer.averageSyncDurationMs * 2).toInt()
-        var seekPosition = millisSinceVideoStart + delay
+        val currentOffset = syncVideoPlayer.currentPosition - getSeekPosition(video, millisSinceVideoStart)
+
+        if (synchronizedLastTime) {
+            // Checking how well the last synchronization went.
+            if (currentOffset.absoluteValue < 100) {
+                /* When we begin the playback of a new video, the lag is really high,
+                 * and we don't include that in the average. */
+                averageLagMs += currentOffset.absoluteValue
+                val oldSeekBias = seekBiasMs.value.toInt()
+                seekBiasMs += (oldSeekBias + currentOffset)
+            }
+        }
+        val needToSynchronize =
+            currentOffset.absoluteValue > (averageLagMs.value * 2).coerceIn(30.0..50.0)
+        synchronizedLastTime = needToSynchronize
+
+        if (needToSynchronize) {
+            Logger.log("The lag is too high, synchronizing the video!")
+            // We introduce a delay so that the sync operation finishes in time.
+            val seekDelay = (syncVideoPlayer.averageSyncDurationMs.value * 2).toInt()
+            val positionAfterDelay =
+                getSeekPosition(video, millisSinceVideoStart + seekDelay - seekBiasMs.value.toInt())
+            syncVideoPlayer.seekWithDelay(positionAfterDelay, seekDelay)
+        }
+    }
+
+    private fun getSeekPosition(video: ScheduledVideo, millisSinceVideoStart: Int): Int {
+        var seekPosition = millisSinceVideoStart
         if (video.loop)
             seekPosition %= syncVideoPlayer.currentVideoDurationMs
         else
             seekPosition = seekPosition.coerceAtMost(syncVideoPlayer.currentVideoDurationMs)
-        Logger.log("Seeking to $seekPosition after $delay")
-        syncVideoPlayer.seekWithDelay(seekPosition, delay)
+        return seekPosition
     }
 
-    // This class is not thread-safe, use it from UI thread only.
+    /* Hack: since MediaPlayer.seekTo() is really slow, we call that method
+     * on a MediaPlayer that's not visible (because it's in background).
+     * Then, after it finishes, we swap the background and the foreground.
+     * This class is not thread-safe, use it from UI thread only. */
     private inner class SyncVideoPlayer(
-        private var foregroundVideoView: TextureView,
-        private var backgroundVideoView: TextureView
+        private var foregroundTextureView: TextureView,
+        private var backgroundTextureView: TextureView
     ) {
         @Volatile
         var busy: Boolean = false
@@ -125,13 +168,21 @@ class VideoSynchronizer(
         var currentVideoDurationMs: Int = 0
             private set
 
-        var averageSyncDurationMs: Double = 250.0
-            private set
+        val averageSyncDurationMs = AverageInt(1000)
 
-        private val allVideoViews = listOf(foregroundVideoView, backgroundVideoView)
+        val currentPosition: Int
+            get() {
+                return if (!soughtToEnd)
+                    mediaPlayerByView[foregroundTextureView]!!.currentPosition
+                else
+                    currentVideoDurationMs
+            }
 
-        private val mediaPlayerByView = mapOf(foregroundVideoView to MediaPlayer(),
-            backgroundVideoView to MediaPlayer())
+        private var soughtToEnd: Boolean = false
+
+        private val allTextureViews = listOf(foregroundTextureView, backgroundTextureView)
+
+        private val mediaPlayerByView = mutableMapOf<TextureView, MediaPlayer>()
 
         private val preparedMediaPlayers = mutableSetOf<MediaPlayer>()
 
@@ -139,27 +190,30 @@ class VideoSynchronizer(
 
         private var hadPrepareErrors = false
 
+        private var missingVideoLastTime: String? = null
+
         private val handler = Handler(Looper.getMainLooper())
 
         init {
             // Initializing the texture views with media players
             busy = true
 
-            for (videoView in allVideoViews) {
-                videoView.surfaceTextureListener = object: TextureView.SurfaceTextureListener {
+            for (textureView in allTextureViews) {
+                val mediaPlayer = MediaPlayer()
+                mediaPlayerByView[textureView] = mediaPlayer
+
+                textureView.surfaceTextureListener = object: TextureView.SurfaceTextureListener {
                     override fun onSurfaceTextureAvailable(
                         surface: SurfaceTexture,
                         width: Int,
                         height: Int
                     ) {
-                        val mediaPlayer = mediaPlayerByView[videoView]!!
                         mediaPlayer.setSurface(Surface(surface))
                         mediaPlayersWithSurface.add(mediaPlayer)
                         updateBusyState()
                     }
 
                     override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-                        val mediaPlayer = mediaPlayerByView[videoView]!!
                         mediaPlayer.setSurface(null)
                         mediaPlayersWithSurface.remove(mediaPlayer)
                         updateBusyState()
@@ -185,10 +239,23 @@ class VideoSynchronizer(
 
         fun loadVideo(video: ScheduledVideo) {
             val videoFile = fileManager.getFile(video.filename)
-                ?: return Logger.log("Waiting for ${video.filename} to be downloaded")
+
+            if (videoFile == null) {
+                if (missingVideoLastTime != video.filename) {
+                    Logger.log("${video.filename} is missing! Waiting.")
+                }
+                missingVideoLastTime = video.filename
+                stop()
+                return
+            } else {
+                missingVideoLastTime = null
+            }
+
+            Logger.log("Loading ${video.filename}")
 
             busy = true
             preparedMediaPlayers.clear()
+            hadPrepareErrors = false
 
             fun onPreparationEnded(mediaPlayer: MediaPlayer, success: Boolean) {
                 preparedMediaPlayers.add(mediaPlayer)
@@ -208,14 +275,14 @@ class VideoSynchronizer(
                 }
             }
 
-            for (mediaPlayer in mediaPlayerByView.values) {
-                mediaPlayer.setOnPreparedListener { _ ->
+            for ((textureView, mediaPlayer) in mediaPlayerByView) {
+                mediaPlayer.setOnPreparedListener {
                     currentVideoDurationMs = mediaPlayer.duration
                     if (currentVideoDurationMs == -1) {
                         Logger.log("Cannot get ${video.filename} duration!")
                         onPreparationEnded(mediaPlayer, success = false)
                     }
-                    mediaPlayer.isLooping = video.loop
+                    adjustAspectRatio(textureView, mediaPlayer)
                     onPreparationEnded(mediaPlayer, success = true)
                 }
 
@@ -226,44 +293,100 @@ class VideoSynchronizer(
             }
 
             for (mediaPlayer in mediaPlayerByView.values) {
+                mediaPlayer.reset()
                 mediaPlayer.setDataSource(activity, videoFile.uri)
+                mediaPlayer.prepareAsync()
+            }
+        }
+
+        private fun adjustAspectRatio(textureView: TextureView, mediaPlayer: MediaPlayer) {
+            // Based on https://stackoverflow.com/a/12335916/6120487
+            val videoWidth = mediaPlayer.videoWidth
+            val videoHeight = mediaPlayer.videoHeight
+            val videoProportion = videoWidth.toFloat() / videoHeight.toFloat()
+
+            val (screenWidth, screenHeight) = getScreenSize()
+            val screenProportion = screenWidth.toFloat() / screenHeight.toFloat()
+            val params = textureView.layoutParams
+
+            if (videoProportion > screenProportion) {
+                params.width = screenWidth
+                params.height = (screenWidth.toFloat() / videoProportion).toInt()
+            } else {
+                params.width = (videoProportion * screenHeight.toFloat()).toInt()
+                params.height = screenHeight
+            }
+            textureView.layoutParams = params
+        }
+
+        private fun getScreenSize(): Pair<Int, Int> {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val windowMetrics = activity.windowManager.currentWindowMetrics
+                windowMetrics.bounds.width() to windowMetrics.bounds.height()
+            } else {
+                val displayMetrics = DisplayMetrics()
+                @Suppress("DEPRECATION")
+                activity.windowManager.defaultDisplay.getMetrics(displayMetrics)
+                displayMetrics.widthPixels to displayMetrics.heightPixels
             }
         }
 
         fun seekWithDelay(positionMs: Int, delayMs: Int) {
             busy = true
-            val backgroundMPlayer = mediaPlayerByView[backgroundVideoView]!!
+            val backgroundMPlayer = mediaPlayerByView[backgroundTextureView]!!
             val seekStartRealtime = SystemClock.elapsedRealtime()
             backgroundMPlayer.setOnSeekCompleteListener {
                 val seekEndRealtime = SystemClock.elapsedRealtime()
                 val elapsedMs = seekEndRealtime - seekStartRealtime
-                updateAverageSeekDuration(elapsedMs.toInt())
+                averageSyncDurationMs += elapsedMs.toInt()
                 val waitMs = (delayMs - elapsedMs).coerceAtLeast(0)
                 handler.postDelayed({
                     swapForegroundAndBackground()
                     busy = false
                 }, waitMs)
             }
-            backgroundMPlayer.seekTo(positionMs.toLong(), MediaPlayer.SEEK_CLOSEST)
-        }
-
-        fun updateAverageSeekDuration(seekDurationMs: Int) {
-            val oldCoefficient = 0.7
-            averageSyncDurationMs = averageSyncDurationMs * oldCoefficient +
-                    seekDurationMs * (1 - oldCoefficient)
+            soughtToEnd = (positionMs == currentVideoDurationMs)
+            val syncMode = if (!soughtToEnd) MediaPlayer.SEEK_CLOSEST else MediaPlayer.SEEK_PREVIOUS_SYNC
+            val volume = if (!soughtToEnd) 1.0f else 0.0f
+            backgroundMPlayer.seekTo(positionMs.toLong(), syncMode)
+            backgroundMPlayer.setVolume(volume, volume)
         }
 
         fun swapForegroundAndBackground() {
             // Swapping the variables
             run {
-                val tmp = foregroundVideoView
-                foregroundVideoView = backgroundVideoView
-                backgroundVideoView = tmp
+                val tmp = foregroundTextureView
+                foregroundTextureView = backgroundTextureView
+                backgroundTextureView = tmp
             }
-            foregroundVideoView.bringToFront()
+            foregroundTextureView.bringToFront()
 
-            mediaPlayerByView[backgroundVideoView]!!.pause()
-            mediaPlayerByView[foregroundVideoView]!!.start()
+            mediaPlayerByView[backgroundTextureView]!!.apply {
+                if (isPlaying)
+                    pause()
+            }
+            val foregroundMediaPlayer = mediaPlayerByView[foregroundTextureView]!!
+            foregroundMediaPlayer.start()
+            if (soughtToEnd)
+                foregroundMediaPlayer.pause()
+        }
+
+        fun stop() {
+            for (mediaPlayer in mediaPlayerByView.values) {
+                mediaPlayer.reset()
+            }
+            preparedVideo = null
+            soughtToEnd = false
+            busy = false
+        }
+    }
+
+    private class AverageInt(initialValue: Int, val oldCoefficient: Double = 0.9) {
+        var value: Double = initialValue.toDouble()
+            private set
+
+        operator fun plusAssign(newValue: Int) {
+            value = value * oldCoefficient + newValue * (1 - oldCoefficient)
         }
     }
 }

@@ -34,8 +34,8 @@ class VideoActivity : AppCompatActivity(), Logger.LogListener {
         videoOverlay = findViewById(R.id.video_overlay)
         animationDuration = resources.getInteger(android.R.integer.config_mediumAnimTime)
         logTextView = findViewById(R.id.log_text_view)
-        val foregroundVideoView = findViewById<TextureView>(R.id.foreground_video_view)
-        val backgroundVideoView = findViewById<TextureView>(R.id.background_video_view)
+        val foregroundVideoView = findViewById<TextureView>(R.id.foreground_texture_view)
+        val backgroundVideoView = findViewById<TextureView>(R.id.background_texture_view)
 
         videoSynchronizer = VideoSynchronizer(
             activity = this,
@@ -64,12 +64,12 @@ class VideoActivity : AppCompatActivity(), Logger.LogListener {
     }
 
     override fun onPause() {
+        videoSynchronizer.stop()
         Logger.unregisterLogListener(this)
         super.onPause()
     }
 
     override fun onDestroy() {
-        videoSynchronizer.stop()
         clientServerSelector.stop()
         super.onDestroy()
     }

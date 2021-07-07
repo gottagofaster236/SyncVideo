@@ -5,19 +5,20 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.features.*
+import io.ktor.client.features.json.*
+import io.ktor.client.features.json.serializer.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
 import java.io.IOException
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.NetworkInterface
 import java.net.SocketException
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 
@@ -25,6 +26,9 @@ class ScheduleClient(context: Context) : ClientOrServer(context) {
     private val client = HttpClient(CIO) {
         install(HttpTimeout) {
             requestTimeoutMillis = 10000
+        }
+        install(JsonFeature) {
+            serializer = KotlinxSerializer()
         }
     }
 
@@ -45,11 +49,9 @@ class ScheduleClient(context: Context) : ClientOrServer(context) {
 
             val response: HttpResponse
             try {
-                response = client.get("$serverUrl/schedule")
-                if (response.status != HttpStatusCode.OK) {
-                    return@runBlocking
+                schedule = client.get("$serverUrl/schedule") {
+                    accept(ContentType.Application.Json)
                 }
-                schedule = response.receive()
             } catch (e: Exception) {
                 handleRequestException(e)
                 return@runBlocking
@@ -92,10 +94,11 @@ class ScheduleClient(context: Context) : ClientOrServer(context) {
 
         try {
             val serverUrl = serverUrl ?: return
-            client.get<HttpStatement>("$serverUrl/file/$filename").execute { httpResponse ->
-                if (httpResponse.status != HttpStatusCode.OK) {
-                    return@execute
+            client.get<HttpStatement>("$serverUrl/file/$filename"){
+                timeout {
+                    requestTimeoutMillis = TimeUnit.DAYS.toMillis(1)
                 }
+            }.execute { httpResponse ->
                 val outputStream = withContext(Dispatchers.Default) {
                     context.contentResolver.openOutputStream(tmpFile.uri)
                 } ?: return@execute
@@ -127,7 +130,7 @@ class ScheduleClient(context: Context) : ClientOrServer(context) {
     }
 
     override fun start() {
-        handleMissingFile("schedule.txt")
+        Logger.log("Created the client!")
     }
 
     override fun stop() {}
@@ -177,7 +180,10 @@ class ScheduleClient(context: Context) : ClientOrServer(context) {
     }
 
     private fun handleRequestException(e: Exception) {
-        if (e is IOException || e is HttpRequestTimeoutException) {
+        if (e is ClientRequestException) {
+            // For example, file not found
+            return
+        } else if (e is IOException || e is HttpRequestTimeoutException) {
             serverUrl = null  // Have to find server again since this URL isn't working.
             return
         } else {
