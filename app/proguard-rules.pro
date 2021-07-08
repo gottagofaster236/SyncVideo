@@ -20,4 +20,20 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
--keep public class io.netty.buffer.** { *; }
+-keepattributes Signature,InnerClasses,Annotation
+
+-keepclasseswithmembers class io.netty.** {
+    *;
+}
+-keepnames class io.netty.** {
+    *;
+}
+
+-dontnote kotlinx.serialization.SerializationKt
+-keepclassmembers class com.lr_soft.syncvideo.* { # <-- change package name to your app's
+*** Companion;
+}
+-keepclasseswithmembers class com.lr_soft.syncvideo.* { # <-- change package name to your app's
+kotlinx.serialization.KSerializer serializer(...);
+}
+

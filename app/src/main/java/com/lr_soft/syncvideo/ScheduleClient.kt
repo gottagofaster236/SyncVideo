@@ -47,7 +47,6 @@ class ScheduleClient(context: Context) : ClientOrServer(context) {
         runBlocking {
             val serverUrl = serverUrl ?: return@runBlocking
 
-            val response: HttpResponse
             try {
                 schedule = client.get("$serverUrl/schedule") {
                     accept(ContentType.Application.Json)
