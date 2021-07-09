@@ -36,16 +36,22 @@ class VideoSynchronizer(
     private val averageLagMs = AverageInt(initialValue = 0)
     private var synchronizedLastTime = false
 
+    private companion object {
+        const val VIDEO_SYNC_PERIOD_MS = 2000L
+        const val TIME_SYNC_PERIOD_MS = 10000L
+    }
+
     fun start() {
         isRunning = true
-        kronosClock = AndroidClockFactory.createKronosClock(activity.applicationContext)
+        kronosClock = AndroidClockFactory.createKronosClock(activity.applicationContext,
+            minWaitTimeBetweenSyncMs = TIME_SYNC_PERIOD_MS, cacheExpirationMs = TIME_SYNC_PERIOD_MS)
         kronosClock.syncInBackground()
         timer = Timer()
         timer.scheduleAtFixedRate(object : TimerTask() {
             override fun run() {
                 synchronizeVideo()
             }
-        }, 0, 2000)
+        }, 0, VIDEO_SYNC_PERIOD_MS)
     }
 
     fun stop() {
