@@ -1,15 +1,15 @@
 <resources>
     <string name="app_name">SyncVideo</string>
-    <string name="title_activity_settings">Настройки</string>
-    <string name="pref_device_id_key">deviceId</string>
-    <string name="pref_device_type_key">deviceType</string>
-    <string name="device_number">Номер устройства</string>
-    <string name="select_device_number">Выбирите номер устройства</string>
-    <string name="device_type">Тип устройства</string>
-    <string name="select_device_type">Выберите тип устройства</string>
-    <string name="client">Клиент</string>
-    <string name="server">Сервер</string>
-    <string name="continue_text">Продолжить</string>
-    <string name="device_id_should_not_be_empty">Номер устройства не должен быть пустым!</string>
-    <string name="select_application_folder">Выбрать папку для файлов\n(обязательно для сервера)</string>
+    <string name="title_activity_settings">Settings</string>
+    <string name="pref_device_id_key" translatable="false">deviceId</string>
+    <string name="pref_device_type_key" translatable="false">deviceType</string>
+    <string name="device_number">Device number</string>
+    <string name="select_device_number">Select the device number</string>
+    <string name="device_type">Device type</string>
+    <string name="select_device_type">Select the device type</string>
+    <string name="client">Client</string>
+    <string name="server">Server</string>
+    <string name="continue_text">Continue</string>
+    <string name="device_id_should_not_be_empty">Device id should not be empty!</string>
+    <string name="select_configuration_folder">Select the configuration folder\n(required for server)</string>
 </resources>
