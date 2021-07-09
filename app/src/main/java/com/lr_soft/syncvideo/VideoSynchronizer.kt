@@ -45,7 +45,7 @@ class VideoSynchronizer(
             override fun run() {
                 synchronizeVideo()
             }
-        }, 0, 500)
+        }, 0, 2000)
     }
 
     fun stop() {
