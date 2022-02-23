@@ -3,7 +3,7 @@
 This is an app for Android that enables synchronous (<1 frame of latency) playback of videos according to a schedule.
 
 ## Prerequisites
-Several devices on the same local area network (for example, connected to the same Wi-Fi), running Android 8 or higher.
+Several devices on the same local area network (preferably by Ethernet), running Android 8 or higher.
 
 ## Usage
 
